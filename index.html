@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>My Calendar</title>
+<title>Kyro</title>
 <meta name="theme-color" content="#2340d8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Calendar">
+<meta name="apple-mobile-web-app-title" content="Kyro">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-classic-180.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -590,8 +590,9 @@ textarea{height:64px;padding:10px 12px;resize:vertical}
         <p class="fine" id="modeNote"></p>
         <h2>App icon</h2>
         <div class="grp">
-          <div class="opt"><span class="ol" style="flex-direction:row;align-items:center;gap:14px"><img id="iconPrev" src="icon-classic-180.png" alt="" width="56" height="56" style="border-radius:13px;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.2)"><span class="ol">Matches your theme<small>Your Home Screen uses this icon when you add the app. To change it later, remove the app and add it again.</small></span></span><button class="obtn" id="iconSave" style="white-space:nowrap">Save image</button></div>
+          <div class="opt"><span class="ol" style="flex-direction:row;align-items:center;gap:14px"><img id="iconPrev" src="icon-180.png" alt="" width="56" height="56" style="border-radius:13px;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.2)"><span class="ol"><span id="iconName">Kyro logo</span><small>Your Home Screen uses this icon when you add the app. To change it later, remove the app and add it again.</small></span></span><button class="obtn" id="iconSave" style="white-space:nowrap">Save image</button></div>
         </div>
+        <div class="grp" style="margin-top:10px"><div class="opt"><span class="ol">Icon style</span><span class="pill" id="icPill"><button data-v="kyro">Kyro logo</button><button data-v="theme">Match theme</button></span></div></div>
         <h2>Calendar</h2>
         <div class="grp">
           <div class="opt"><span class="ol">Week starts on</span><span class="pill" id="wsPill"><button data-v="0">Sunday</button><button data-v="1">Monday</button></span></div>
@@ -604,7 +605,7 @@ textarea{height:64px;padding:10px 12px;resize:vertical}
           <div class="opt"><span class="ol">Restore from backup<small>Adds events and calendars from a saved file</small></span><button class="obtn" id="bkLoad">Choose file</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
         </div>
         <p class="fine status"></p>
-        <p class="fine">My Calendar · version 6.1</p>
+        <p class="fine">Kyro · version 7</p>
       </div>
     </section>
   </main>
@@ -619,7 +620,7 @@ textarea{height:64px;padding:10px 12px;resize:vertical}
 
   <div class="scrim" id="scrim"></div>
   <aside class="drawer" id="drawer" aria-label="Menu" inert>
-    <div class="dhd"><img src="icon-192.png" alt="">My Calendar</div>
+    <div class="dhd"><img src="icon-192.png" alt="">Kyro</div>
     <p class="dsec">My calendars</p>
     <ul class="cal-l" id="calList"></ul>
     <button class="drow" id="newCal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New calendar</button>
@@ -841,7 +842,7 @@ const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}ca
 const motion=()=>!matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isWide=()=>matchMedia('(min-width:1000px)').matches;
 
-const S=Object.assign({shade:'auto',skin:'classic',weekStart:0,holidays:true,h24:false,lastCal:'blue'},lsGet('mycal.settings',{}));delete S.nav;if(S.skin==='classic-dark')S.skin='classic';if(!THEMES[S.skin])S.skin='classic';
+const S=Object.assign({icon:'kyro',shade:'auto',skin:'classic',weekStart:0,holidays:true,h24:false,lastCal:'blue'},lsGet('mycal.settings',{}));delete S.nav;if(S.skin==='classic-dark')S.skin='classic';if(!THEMES[S.skin])S.skin='classic';
 const tm=t=>{if(!t)return['',''];if(S.h24)return[t,''];let [h,m]=t.split(':').map(Number);const ap=h<12?'AM':'PM';h=h%12||12;return[h+(m?':'+pad(m):''),ap]};
 const tmS=t=>tm(t).join(' ').trim();
 const tmShort=t=>{const [a,b]=tm(t);return b?a+b[0].toLowerCase():a};
@@ -1130,7 +1131,7 @@ function openSchedDetail(x,k){
 function icsSched(x){
   const D=k=>k.replace(/-/g,''),BY=['SU','MO','TU','WE','TH','FR','SA'],q=v=>String(v).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
   let d=parse(x.from);for(let i=0;i<7&&!x.days.includes(d.getDay());i++)d=addDays(d,1);const f=key(d);
-  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//My Calendar//EN','METHOD:PUBLISH','BEGIN:VEVENT',`UID:${x.id}@my-calendar-schedule`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'')}`,`SUMMARY:${q(schTitle(x))}`,
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kyro//EN','METHOD:PUBLISH','BEGIN:VEVENT',`UID:${x.id}@my-calendar-schedule`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'')}`,`SUMMARY:${q(schTitle(x))}`,
     `DTSTART:${D(f)}T${x.start.replace(':','')}00`,`DTEND:${D(f)}T${x.end.replace(':','')}00`,`RRULE:FREQ=WEEKLY;BYDAY=${x.days.map(n=>BY[n]).join(',')};UNTIL=${D(x.to)}T235959`];
   if(x.loc)L.push('LOCATION:'+q(x.loc));if(x.name&&x.kind==='school')L.push('DESCRIPTION:'+q([x.name,x.section?'Section '+x.section:''].filter(Boolean).join(', ')));
   L.push('END:VEVENT','END:VCALENDAR');return L.join('\r\n')+'\r\n';
@@ -1153,6 +1154,7 @@ function renderSettings(){
   SKINS.forEach(loadFonts);
   $$('#themes .tcard').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===S.skin));
   $$('#wsPill button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.v===S.weekStart));
+  $$('#icPill button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===(S.icon||'kyro')));
   $$('#shPill button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===(S.shade||'auto')));
   $('#holSw').checked=S.holidays;$('#h24Sw').checked=S.h24;
   const last=lsGet('mycal.lastBackup',0);
@@ -1162,7 +1164,7 @@ function applySkin(){
   const r=document.documentElement,m=modeNow(),t=THEMES[S.skin]||THEMES.classic;
   r.dataset.skin=S.skin;r.dataset.mode=m;loadFonts(S.skin);
   const tv=m==='dusk'?{...t.night,...t.dusk}:t[m];document.querySelector('meta[name=theme-color]').setAttribute('content',tv.meta||tv.hd);
-  const ic=`icon-${S.skin}-180.png`;document.querySelector('link[rel=apple-touch-icon]').setAttribute('href',ic);const pv=$('#iconPrev');if(pv)pv.src=ic;
+  const th=S.icon==='theme',ic=th?`icon-${S.skin}-180.png`:'icon-180.png';document.querySelector('link[rel=apple-touch-icon]').setAttribute('href',ic);const pv=$('#iconPrev');if(pv)pv.src=ic;const nm=$('#iconName');if(nm)nm.textContent=th?`${t.name} icon`:'Kyro logo';
   requestAnimationFrame(ekgStart);
   const mn=$('#modeNote');if(mn)mn.textContent=S.shade==='auto'||!S.shade?`Showing the ${m} version. It switches between Day and Night with your iPhone's Light/Dark setting.`:`Always showing the ${m} version.`;
 }
@@ -1376,7 +1378,7 @@ async function toggleDone(id){const e=events.get(id);if(!e)return;const {id:_,..
 function icsFor(e){
   const D=k=>k.replace(/-/g,''),stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
   const q=x=>String(x).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
-  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//My Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',`UID:${e.id}@my-calendar`,`DTSTAMP:${stamp}`,`SUMMARY:${q(e.title)}`];
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kyro//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',`UID:${e.id}@my-calendar`,`DTSTAMP:${stamp}`,`SUMMARY:${q(e.title)}`];
   const ed=e.endDate||e.date;
   if(e.allDay||!e.start)L.push(`DTSTART;VALUE=DATE:${D(e.date)}`,`DTEND;VALUE=DATE:${D(key(addDays(parse(ed),1)))}`);
   else L.push(`DTSTART:${D(e.date)}T${e.start.replace(':','')}00`,`DTEND:${D(ed)}T${(e.end||fromMin(Math.min(toMin(e.start)+30,1439))).replace(':','')}00`);
@@ -1530,7 +1532,8 @@ $('#bkSave').addEventListener('click',()=>{
     lsSet('mycal.lastBackup',Date.now());renderSettings();toast('Backup file saved');
   }catch(_){toast("Couldn't save a file here")}
 });
-$('#iconSave').addEventListener('click',()=>{try{const a=document.createElement('a');a.href=`icon-${S.skin}-512.png`;a.download=`My Calendar icon - ${THEMES[S.skin].name}.png`;document.body.appendChild(a);a.click();a.remove();toast('Icon image saved')}catch(_){toast("Couldn't save the image here")}});
+$('#iconSave').addEventListener('click',()=>{try{const th=S.icon==='theme',a=document.createElement('a');a.href=th?`icon-${S.skin}-512.png`:'kyro-1024.png';a.download=th?`Kyro icon - ${THEMES[S.skin].name}.png`:'Kyro logo.png';document.body.appendChild(a);a.click();a.remove();toast('Icon image saved')}catch(_){toast("Couldn't save the image here")}});
+$('#icPill').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.icon=b.dataset.v;saveSettings()}});
 $('#bkLoad').addEventListener('click',()=>$('#bkFile').click());
 $('#bkFile').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
