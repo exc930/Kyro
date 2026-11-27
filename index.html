@@ -200,6 +200,10 @@ svg{flex:none}
 .drow:hover{background:var(--sf)}
 .drow svg{width:22px;height:22px;color:var(--mute)}
 .dhr{border:0;border-top:1px solid var(--line);margin:12px 6px}
+.who{margin-top:auto;padding:0 4px}
+.whohd{display:flex;align-items:center;justify-content:space-between;padding-right:8px}.whohd .dsec{margin-top:4px}
+.whop{display:grid;grid-auto-flow:unset;grid-template-columns:1fr 1fr;width:100%;margin-top:6px}.whop button{height:42px;font-size:.95rem;overflow:hidden;text-overflow:ellipsis}
+.whoren{display:flex;gap:6px;margin-top:8px}.whoren[hidden]{display:none}.whohd .lnk{font-size:.85rem}.whoren input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:0 10px;font:inherit;font-size:16px}.whoren .btn{flex:none}
 /* Settings */
 .set{padding:16px max(16px,env(safe-area-inset-left,0px)) 40px;max-width:760px;width:100%;margin:0 auto}
 .set h2{font:800 calc(1.1rem*var(--ds) + 2px)/1.2 var(--fd);margin:22px 0 10px}
@@ -610,7 +614,7 @@ textarea{height:64px;padding:10px 12px;resize:vertical}
           <div class="opt"><span class="ol">Restore from backup<small>Adds events and calendars from a saved file</small></span><button class="obtn" id="bkLoad">Choose file</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
         </div>
         <p class="fine status"></p>
-        <p class="fine">Kyro · version 7.4</p>
+        <p class="fine">Kyro · version 7.6</p>
       </div>
     </section>
   </main>
@@ -638,6 +642,12 @@ textarea{height:64px;padding:10px 12px;resize:vertical}
     </ul>
     <hr class="dhr">
     <button class="drow" id="toSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</button>
+    <div class="who" id="who">
+      <hr class="dhr">
+      <div class="whohd"><p class="dsec">Whose calendar</p><button type="button" class="lnk" id="whoEdit">Rename</button></div>
+      <span class="pill whop" id="whoPill" role="group" aria-label="Whose calendar"></span>
+      <div class="whoren" id="whoRen" hidden><input type="text" id="whoN1" maxlength="20" aria-label="First name" autocomplete="off"><input type="text" id="whoN2" maxlength="20" aria-label="Second name" autocomplete="off"><button type="button" class="btn pri" id="whoDone">Done</button></div>
+    </div>
   </aside>
   <div class="toast" id="toast" role="status"><span id="tMsg"></span><button id="undo"></button></div>
 </div>
@@ -837,7 +847,7 @@ const SEED_SCH=[
 let SCH=[],schedKind='school',schedRange='',editingSch=null;
 const okD=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v),okT=v=>typeof v==='string'&&/^\d{2}:\d{2}$/.test(v),str=(v,n)=>typeof v==='string'?v.slice(0,n):'';
 const cleanSch=x=>x&&typeof x.id==='string'&&okD(x.from)&&okD(x.to)&&okT(x.start)&&okT(x.end)&&Array.isArray(x.days)?{id:x.id.replace(/[^\w-]/g,'').slice(0,40)||'s',kind:x.kind==='work'?'work':'school',term:x.kind==='work'?'':str(x.term,30),code:str(x.code,20),name:str(x.name,80),type:str(x.type,30),section:str(x.section,20),from:x.from,to:x.to,days:[...new Set(x.days.map(Number).filter(d=>d>=0&&d<7))].sort(),start:x.start,end:x.end,loc:str(x.loc,80),units:Math.max(0,Math.min(20,+x.units||0)),color:HEX[x.color]?x.color:'blue'}:null;
-function setSch(list){SCH=(Array.isArray(list)?list:SEED_SCH).map(cleanSch).filter(Boolean)}
+function setSch(list){SCH=(Array.isArray(list)?list:prof==='p1'?SEED_SCH:[]).map(cleanSch).filter(Boolean)}
 const groupKey=x=>x.kind==='school'&&x.term?'t:'+x.term:'d:'+x.from+'|'+x.to;
 const schTitle=x=>x.kind==='school'?`${x.code}${x.type?' '+x.type:''}`.trim()||x.name:(x.name||'Work')+(x.type?' · '+x.type:'');
 const schShown=x=>x.kind==='school'?S.showSchool!==false:S.showWork!==false;
@@ -863,6 +873,13 @@ const toMin=t=>{if(!t)return 0;const [h,m]=t.split(':').map(Number);return h*60+
 const fromMin=m=>pad(Math.floor(m/60))+':'+pad(m%60);
 const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(_){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(_){return false}};
+// Separate calendars per person: each profile has its own events, calendars and schedules
+const PROFS=(()=>{const l=lsGet('mycal.profiles',null);return Array.isArray(l)&&l.length===2?l:[{id:'p1',name:'Estefanía'},{id:'p2',name:'Mario'}]})();
+let prof=lsGet('mycal.profile','p1');if(!PROFS.some(x=>x.id===prof))prof='p1';
+const pk=(k,p=prof)=>p==='p1'?'mycal.'+k:`mycal.${p}.${k}`;
+const pdoc=(id,p=prof)=>p==='p1'?id:`${p}__${id}`;
+const ownDoc=id=>prof==='p1'?(/^p\d+__/.test(id)?null:id):(id.startsWith(prof+'__')?id.slice(prof.length+2):null);
+const profName=(p=prof)=>PROFS.find(x=>x.id===p)?.name||'';
 const motion=()=>!matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isWide=()=>matchMedia('(min-width:1000px)').matches;
 
@@ -879,7 +896,7 @@ lastView=view;
 // Calendars
 const calOf=e=>e._sched?{id:'sched',name:e._sched.kind==='school'?'School schedule':'Work schedule',color:e._sched.color,hidden:false}:cals.get(e.cal||e.color)||cals.values().next().value||DEFAULT_CALS[0];
 const isBday=e=>calOf(e).id==='birthdays';
-const ageOn=(e,k)=>{const n=+k.slice(0,4)-+e.date.slice(0,4);return n>0?n:0};
+const ageOn=(e,k)=>{if(e.noYear)return 0;const n=+k.slice(0,4)-+e.date.slice(0,4);return n>0?n:0};
 const colorOf=e=>cc(HEX[e.ecolor]?e.ecolor:calOf(e).color);
 const typeOf=e=>{const id=calOf(e).id;return id==='birthdays'?'birthday':id==='tasks'?'task':'event'};
 const isTask=e=>typeOf(e)==='task';
@@ -1390,7 +1407,7 @@ $('#form').addEventListener('submit',async ev=>{
       if(en2==='after')count=Math.min(999,Math.max(1,Math.floor(+$('#f-count').value||1)))}
     else repeat=rsel}
   const id=editing?.id||'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  const data={kind:'event',type:t,title,date,endDate:edate>date?edate:'',allDay:ad,start:ad?'':start,end:ad||t!=='event'?'':end,repeat,every,until,count,cal,color:cals.get(cal)?.color||'blue',ecolor:t==='event'?curCol():'',rems:getRems(),loc:t==='event'?$('#f-loc').value.trim():'',notes:$('#f-notes').value.trim(),done:t==='task'?!!editing?.done:false,updated:Date.now()};
+  const data={kind:'event',type:t,title,date,endDate:edate>date?edate:'',allDay:ad,start:ad?'':start,end:ad||t!=='event'?'':end,repeat,every,until,count,cal,color:cals.get(cal)?.color||'blue',ecolor:t==='event'?curCol():'',rems:getRems(),loc:t==='event'?$('#f-loc').value.trim():'',notes:$('#f-notes').value.trim(),done:t==='task'?!!editing?.done:false,...(t==='birthday'&&editing?.noYear&&editing.date===date?{noYear:true}:{}),updated:Date.now()};
   if(t==='task'&&!ad)data.end='';
   if(t==='event'&&S.lastCal!==cal){S.lastCal=cal;lsSet('mycal.settings',S)}
   const isNew=!editing;closeSheet($('#sheet'));sel=date;await save(id,data);
@@ -1444,7 +1461,7 @@ function openDetail(item){
     setHero($('#dHero'),c,t==='birthday'?PICS.birthday:[],t==='birthday'?ICONS.cake:artFor());
     const bdD=parse(e.date);
     $('#dT').textContent=e.title;
-    $('#dWhen').textContent=t==='birthday'?`${MON3[bdD.getMonth()]} ${bdD.getDate()}, ${bdD.getFullYear()}`:sp?`${longDate(st)} – ${longDate(en)}`:longDate(st);
+    $('#dWhen').textContent=t==='birthday'?`${MON3[bdD.getMonth()]} ${bdD.getDate()}${e.noYear?'':', '+bdD.getFullYear()}`:sp?`${longDate(st)} – ${longDate(en)}`:longDate(st);
     if(t==='birthday'){const a=ageOn(e,st);rows.push(['cake',a?`Turns ${a} on ${longDate(st)}`:`Every year on ${MONTHS[bdD.getMonth()]} ${bdD.getDate()}`])}
     else if(t==='task'){rows.push(['check',e.done?'Done':'Not done yet']);if(e.start)rows.push(['clock',`Due at ${tmS(e.start)}`]);$('#dTask').hidden=false;$('#dTask').textContent=e.done?'Mark as not done':'Mark as done'}
     else{rows.push(['clock',e.allDay?(sp?`All day, ${sp+1} days`:'All day'):sp?`${tmS(e.start)}, ${longDate(st)} – ${tmS(e.end)}, ${longDate(en)}`:`${tmS(e.start)} – ${tmS(e.end)}`]);const rl=repLabel(e);if(rl)rows.push(['rep',rl])}
@@ -1509,24 +1526,42 @@ const setStatus=t=>$$('.status').forEach(p=>p.textContent=t);
 const cleanCal=c=>c&&typeof c.id==='string'&&typeof c.name==='string'?{id:c.id.replace(/[^\w-]/g,'').slice(0,40)||'c',name:c.name.slice(0,40),color:HEX[c.color]?c.color:'blue',hidden:!!c.hidden,...(SPECIAL[c.id]?{special:true}:{})}:null;
 function setCals(list){const m=new Map();for(const c of (list||[]).map(cleanCal))if(c)m.set(c.id,c);if(!m.size)for(const c of DEFAULT_CALS)m.set(c.id,{...c});for(const sp of [BDAY,TASKS]){const b=m.get(sp.id)||{...sp};m.delete(sp.id);m.set(sp.id,b)}cals=m}
 function loadLocal(){
-  mode='local';events.clear();setCals(lsGet('mycal.calendars',null));setSch(lsGet('mycal.schedules',null));
-  for(const e of lsGet('mycal.events',[]))if(e&&e.id&&e.title&&e.date)events.set(e.id,e);
+  mode='local';events.clear();setCals(lsGet(pk('calendars'),null));setSch(lsGet(pk('schedules'),null));
+  for(const e of lsGet(pk('events'),[]))if(e&&e.id&&e.title&&e.date)events.set(e.id,e);
   setStatus('Events are saved on this device.');render();
 }
-const saveLocal=()=>{if(!lsSet('mycal.events',[...events.values()]))setStatus("Couldn't save on this device.")};
+const saveLocal=()=>{if(!lsSet(pk('events'),[...events.values()]))setStatus("Couldn't save on this device.")};
 const fail=err=>setStatus(err?.code==='quota_exceeded'?'Storage is full; delete some old events.':"Couldn't save that change. Try again.");
 async function saveSch(){
-  if(mode==='db'){try{await col.doc('schedules').set({kind:'schedules',list:SCH})}catch(e){fail(e)}}
-  else if(!lsSet('mycal.schedules',SCH))setStatus("Couldn't save on this device.");
+  if(mode==='db'){try{await col.doc(pdoc('schedules')).set({kind:'schedules',list:SCH})}catch(e){fail(e)}}
+  else if(!lsSet(pk('schedules'),SCH))setStatus("Couldn't save on this device.");
 }
 async function saveCals(){
-  if(mode==='db'){try{await col.doc('calendars').set({kind:'calendars',list:[...cals.values()]})}catch(e){fail(e)}}
-  else lsSet('mycal.calendars',[...cals.values()]);
+  if(mode==='db'){try{await col.doc(pdoc('calendars')).set({kind:'calendars',list:[...cals.values()]})}catch(e){fail(e)}}
+  else lsSet(pk('calendars'),[...cals.values()]);
 }
-async function save(id,data){events.set(id,{...data,id});render();if(mode==='db'){try{await col.doc(id).set(data)}catch(e){fail(e)}}else saveLocal()}
-async function saveMany(list){for(const e of list)events.set(e.id,e);render();if(mode==='db'){for(const e of list){const {id,...d}=e;try{await col.doc(id).set(d)}catch(x){fail(x);break}}}else saveLocal()}
+async function save(id,data){events.set(id,{...data,id});render();if(mode==='db'){try{await col.doc(pdoc(id)).set(data)}catch(e){fail(e)}}else saveLocal()}
+async function saveMany(list){for(const e of list)events.set(e.id,e);render();if(mode==='db'){for(const e of list){const {id,...d}=e;try{await col.doc(pdoc(id)).set(d)}catch(x){fail(x);break}}}else saveLocal()}
 async function remove(id){await removeMany([id])}
-async function removeMany(ids){for(const id of ids)events.delete(id);render();if(mode==='db'){for(const id of ids){try{await col.doc(id).delete()}catch(e){fail(e);break}}}else saveLocal()}
+async function removeMany(ids){for(const id of ids)events.delete(id);render();if(mode==='db'){for(const id of ids){try{await col.doc(pdoc(id)).delete()}catch(e){fail(e);break}}}else saveLocal()}
+let lastSnap=null;
+function applySnap(){
+  events.clear();let cl=null,sl=null;
+  for(const d of lastSnap?.docs||[]){const x=d.data(),id=ownDoc(d.id);if(!x||id===null)continue;
+    if(id==='calendars'&&x.kind==='calendars'&&Array.isArray(x.list))cl=x.list;
+    else if(id==='schedules'&&x.kind==='schedules'&&Array.isArray(x.list))sl=x.list;
+    else if(x.kind==='event'&&typeof x.title==='string'&&typeof x.date==='string')events.set(id,{...x,id})}
+  setCals(cl);setSch(sl);render();
+}
+function useProf(p){prof=p;if(mode==='db')applySnap();else loadLocal()}
+function renderWho(){
+  $('#whoPill').innerHTML=PROFS.map(x=>`<button type="button" data-p="${x.id}" aria-pressed="${x.id===prof}">${esc(x.name)}</button>`).join('');
+}
+$('#whoPill').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.p===prof)return;
+  useProf(b.dataset.p);lsSet('mycal.profile',prof);renderWho();renderCals();drawer(false);toast(`Showing ${profName()}’s calendar`)});
+$('#whoEdit').addEventListener('click',()=>{const r=$('#whoRen');r.hidden=!r.hidden;if(!r.hidden){$('#whoN1').value=PROFS[0].name;$('#whoN2').value=PROFS[1].name;$('#whoN1').focus()}});
+$('#whoDone').addEventListener('click',()=>{PROFS[0].name=$('#whoN1').value.trim()||PROFS[0].name;PROFS[1].name=$('#whoN2').value.trim()||PROFS[1].name;lsSet('mycal.profiles',PROFS);$('#whoRen').hidden=true;renderWho()});
+renderWho();
 async function connect(){
   const c=window.claude;
   if(!c?.use){loadLocal();return}
@@ -1538,12 +1573,7 @@ async function connect(){
     const timer=setTimeout(()=>setStatus("Can't reach your saved events yet."),10000);
     col.onSnapshot(snap=>{
       if(!snap.metadata.fromCache){clearTimeout(timer);setStatus('Saved to your Claude account.')}
-      events.clear();let cl=null,sl=null;
-      for(const d of snap.docs){const x=d.data();if(!x)continue;
-        if(d.id==='calendars'&&x.kind==='calendars'&&Array.isArray(x.list))cl=x.list;
-        else if(d.id==='schedules'&&x.kind==='schedules'&&Array.isArray(x.list))sl=x.list;
-        else if(x.kind==='event'&&typeof x.title==='string'&&typeof x.date==='string')events.set(d.id,{...x,id:d.id})}
-      setCals(cl);setSch(sl);render();
+      lastSnap=snap;applySnap();
     },()=>{clearTimeout(timer);setStatus('Lost the connection to your saved events.')});
   }catch(_){loadLocal()}
 }
@@ -1552,21 +1582,33 @@ async function connect(){
 $('#bkSave').addEventListener('click',()=>{
   try{
     const blob=new Blob([JSON.stringify({format:'mycal-backup',version:2,saved:new Date().toISOString(),calendars:[...cals.values()],schedules:SCH,events:[...events.values()]},null,1)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`calendar-backup-${key(new Date())}.json`;document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`kyro-${(profName()||'calendar').replace(/[^\p{L}\p{N}]+/gu,'-')}-backup-${key(new Date())}.json`;document.body.appendChild(a);a.click();a.remove();
     lsSet('mycal.lastBackup',Date.now());renderSettings();toast('Backup file saved');
   }catch(_){toast("Couldn't save a file here")}
 });
 $('#iconSave').addEventListener('click',()=>{try{const th=S.icon==='theme',a=document.createElement('a');a.href=th?`icon-${S.skin}-512.png`:'kyro-1024.png';a.download=th?`Kyro icon - ${THEMES[S.skin].name}.png`:'Kyro logo.png';document.body.appendChild(a);a.click();a.remove();toast('Icon image saved')}catch(_){toast("Couldn't save the image here")}});
 $('#icPill').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.icon=b.dataset.v;saveSettings()}});
+async function mergeHere(d){
+  if(Array.isArray(d.schedules)){for(const x of d.schedules.map(cleanSch))if(x&&!SCH.some(y=>y.id===x.id))SCH.push(x);await saveSch()}
+  if(Array.isArray(d.calendars)){for(const c of d.calendars.map(cleanCal))if(c&&!cals.has(c.id))cals.set(c.id,c);await saveCals()}
+  if(Array.isArray(d.removeIds)){const r=d.removeIds.filter(i=>events.has(i));if(r.length)await removeMany(r)}
+  const list=[];for(const x of d.events)if(x&&typeof x.id==='string'&&typeof x.title==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)){const id=x.id.replace(/[^\w-]/g,'').slice(0,60)||'e'+list.length;if(d.keep&&events.has(id))continue;list.push({...x,id,kind:'event'})}
+  await saveMany(list);
+  if(Array.isArray(d.removeCals)){let ch=0;for(const c of d.removeCals)if(cals.has(c)&&!cals.get(c).special&&![...events.values()].some(e=>(e.cal||e.color)===c)){cals.delete(c);ch=1}if(ch)await saveCals()}
+  return list.length;
+}
 $('#bkLoad').addEventListener('click',()=>$('#bkFile').click());
 $('#bkFile').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
   try{
-    const d=JSON.parse(await f.text());if(d?.format!=='mycal-backup'||!Array.isArray(d.events))throw 0;
-    if(Array.isArray(d.schedules)){for(const x of d.schedules.map(cleanSch))if(x&&!SCH.some(y=>y.id===x.id))SCH.push(x);await saveSch()}
-    if(Array.isArray(d.calendars)){for(const c of d.calendars.map(cleanCal))if(c&&!cals.has(c.id))cals.set(c.id,c);await saveCals()}
-    const list=[];for(const x of d.events)if(x&&typeof x.id==='string'&&typeof x.title==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date))list.push({...x,id:x.id.replace(/[^\w-]/g,'').slice(0,60)||'e'+list.length,kind:'event'});
-    await saveMany(list);toast(`Restored ${list.length} event${list.length===1?'':'s'}`);
+    const d=JSON.parse(await f.text());
+    if(d?.format==='kyro-people'&&d.profiles&&typeof d.profiles==='object'){
+      const back=prof;let msg=[];
+      for(const p of PROFS){const x=d.profiles[p.id];if(!x||!Array.isArray(x.events))continue;useProf(p.id);msg.push(`${await mergeHere(x)} for ${p.name}`)}
+      useProf(back);renderCals();toast(`Added ${msg.join(', ')}`);return;
+    }
+    if(d?.format!=='mycal-backup'||!Array.isArray(d.events))throw 0;
+    const n=await mergeHere(d);toast(`Restored ${n} event${n===1?'':'s'}`);
   }catch(_){toast("That file isn't a calendar backup")}
 });
 
